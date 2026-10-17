@@ -22,7 +22,9 @@ npm run test:e2e     # browser tests, including the no-network check
 
 ## Install on a phone
 
-The phone needs to load the app once over HTTPS (browsers only allow installable offline apps on secure sites). Hosting is still to be decided; see `aidlc-docs/aidlc-state.md`. The host only serves the app's files; your logged data never goes to it.
+The app is hosted on GitHub Pages at https://panda-sketch.github.io/period-tracker/ and redeploys on every push to `main` (`.github/workflows/pages.yml`). GitHub only serves the app's files; your logged data never leaves your device.
+
+On iPhone: open the link in Safari, tap Share, then "Add to Home Screen". After the first load it works offline.
 
 ## Layout
 
