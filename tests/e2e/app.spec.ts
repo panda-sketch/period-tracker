@@ -182,3 +182,9 @@ test('period reminder: banner, calendar file, and update prompt', async ({ page 
   await expect(page.getByText(/Your next reminder date is now/)).toBeVisible();
   expect(outside).toEqual([]);
 });
+
+test('turns off double-tap zoom so quick repeated PIN taps do not zoom the page', async ({ page }) => {
+  await page.goto('/');
+  // touch-action on the root applies to every button below it, including the PIN keys.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).touchAction)).toBe('manipulation');
+});
