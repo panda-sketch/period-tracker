@@ -1,0 +1,24 @@
+{
+  "name": "period-tracker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "preact": "10.27.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@preact/preset-vite": "2.10.2",
+    "fake-indexeddb": "6.2.4",
+    "typescript": "5.9.3",
+    "vite": "6.4.1",
+    "vitest": "3.2.4"
+  }
+}
