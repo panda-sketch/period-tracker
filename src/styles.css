@@ -511,3 +511,52 @@ textarea {
   max-width: calc(100% - 32px);
   font-size: 0.9rem;
 }
+
+/* Reminder */
+.banner {
+  background: var(--accent-soft);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+.banner.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-weight: 400;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+}
+.toggle input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+.field-row input[type='text'] {
+  max-width: 60%;
+}
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  min-height: 44px;
+}

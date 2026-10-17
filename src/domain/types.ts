@@ -26,14 +26,27 @@ export interface DayLog {
   note?: string;
 }
 
+export interface ReminderSettings {
+  enabled: boolean;
+  /** Days before the predicted period start. */
+  daysBefore: number;
+  /** Calendar event title; neutral by default so the lock screen reveals nothing. */
+  title: string;
+  /** The reminder date last added to the calendar, to spot when it is out of date. */
+  exportedFor?: ISODate;
+}
+
+export const DEFAULT_REMINDER: ReminderSettings = { enabled: true, daysBefore: 5, title: 'Reminder' };
+
 export interface TrackerData {
   version: 1;
   days: Record<ISODate, DayLog>;
   customSymptoms: string[];
+  reminder: ReminderSettings;
 }
 
 export function emptyData(): TrackerData {
-  return { version: 1, days: {}, customSymptoms: [] };
+  return { version: 1, days: {}, customSymptoms: [], reminder: { ...DEFAULT_REMINDER } };
 }
 
 export function isEmptyLog(d: DayLog): boolean {

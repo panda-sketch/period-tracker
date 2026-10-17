@@ -135,3 +135,50 @@ test('content security policy blocks network connections', async ({ page }) => {
   });
   expect(blocked).toBe(true);
 });
+
+test('period reminder: banner, calendar file, and update prompt', async ({ page }) => {
+  const outside = guardNetwork(page);
+  await page.goto('/');
+  // Seed two past cycles so the next period is predicted 7 days from today.
+  await page.evaluate(async () => {
+    const iso = (offset: number) => {
+      const n = new Date();
+      return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate() + offset)).toISOString().slice(0, 10);
+    };
+    const days: Record<string, unknown> = {};
+    for (const start of [-49, -21]) for (let i = 0; i < 4; i++) days[iso(start + i)] = { date: iso(start + i), flow: 'medium', symptoms: [] };
+    await new Promise<void>((res) => {
+      const r = indexedDB.open('period-tracker', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => {
+        const tx = r.result.transaction('kv', 'readwrite');
+        tx.objectStore('kv').put({ encrypted: false, data: { version: 1, days, customSymptoms: [] } }, 'data');
+        tx.oncomplete = () => res();
+      };
+    });
+  });
+  await page.reload();
+  await expect(page.getByText('Period in 7 days')).toBeVisible();
+  await expect(page.getByText('Reminder: your period is coming soon.')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByText(/Next reminder: .* at 9:00/)).toBeVisible();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Add reminder to calendar' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('reminder.ics');
+  const fs = await import('node:fs');
+  const ics = fs.readFileSync((await download.path())!, 'utf8');
+  expect(ics).toContain('BEGIN:VEVENT');
+  expect(ics).toContain('SUMMARY:Reminder');
+  expect(ics.toLowerCase()).not.toContain('period');
+
+  // A 7-day lead time puts today inside the window and moves the reminder date,
+  // so Today shows the banner and asks to update the calendar.
+  await page.getByLabel('Days before').selectOption('7');
+  await page.getByRole('button', { name: 'Today' }).click();
+  await expect(page.getByText('Reminder: your period is coming soon.')).toBeVisible();
+  await expect(page.getByText(/Your next reminder date is now/)).toBeVisible();
+  expect(outside).toEqual([]);
+});

@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { today, type ISODate } from '../domain/dates';
 import { emptyData, isEmptyLog, type DayLog, type TrackerData } from '../domain/types';
 import { LockedOutError, Vault, WrongPinError } from '../storage/vault';
+import { predict } from '../domain/cycles';
+import { buildICS, reminderDate } from '../domain/reminder';
 import { Calendar } from './Calendar';
+import { saveFile } from './download';
+import { fmtShort } from './format';
 import { DayEditor } from './DayEditor';
 import { PinPad } from './PinPad';
 import { Settings } from './Settings';
@@ -108,6 +112,16 @@ export function App() {
     });
   }
 
+  /** FR-11: hands the phone's calendar an event with an alert, then remembers its date. */
+  function addReminder() {
+    const p = predict(latest.current, todayISO);
+    if (!p) return;
+    const date = reminderDate(p, latest.current.reminder);
+    saveFile(buildICS(date, latest.current.reminder.title), 'reminder.ics', 'text/calendar');
+    commit((d) => ({ ...d, reminder: { ...d.reminder, exportedFor: date } }));
+    notify(`Open the file to add the ${fmtShort(date)} reminder to your calendar.`);
+  }
+
   async function unlock(pin: string) {
     setBusy(true);
     try {
@@ -163,6 +177,7 @@ export function App() {
             data={data}
             todayISO={todayISO}
             onOpenDay={setEditing}
+            onAddReminder={addReminder}
             onStartPeriod={() =>
               saveDay({ ...(data.days[todayISO] ?? { date: todayISO, symptoms: [] }), flow: 'medium' })
             }
@@ -174,6 +189,8 @@ export function App() {
         ) : (
           <Settings
             data={data}
+            onAddReminder={addReminder}
+            onUpdateReminder={(patch) => commit((d) => ({ ...d, reminder: { ...d.reminder, ...patch } }))}
             hasPin={!!vault.current?.hasPin}
             todayISO={todayISO}
             sessionPin={sessionPin.current}

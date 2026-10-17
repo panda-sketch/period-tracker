@@ -34,3 +34,12 @@ Preact, 4 tabs: Today (cycle day, countdown, next fertile window), Calendar (log
 ## Tests
 - Unit (Vitest, 28): dates, period grouping, predictions, stats, fertile window; vault encryption at rest, wrong PIN and lockout, PIN change/removal, wipe; backup round-trips and validation.
 - End-to-end (Playwright, 5, mobile viewport): logging and persistence, offline after install, PIN lock with ciphertext check, backup/delete/restore, and CSP blocking a real network call. Every e2e test also fails if any request leaves the app's own origin.
+
+## FR-11 Period reminder (added 2026-10-17)
+- Option A from `inception-fr11-reminder.md`: a calendar event plus an in-app banner. No server, no push service, CSP unchanged.
+- `src/domain/reminder.ts`: reminder date = predicted start minus `daysBefore` (default 5, range 1 to 14). The banner shows from that date until the predicted start, unless the period is already logged. `calendarOutOfDate` is true when a reminder was added but the upcoming reminder date differs, which covers both a shifted prediction and a new cycle.
+- `buildICS` writes one all-day event with a 9:00 alert (`TRIGGER;RELATED=START:PT9H`), neutral title (default "Reminder", editable, 60 chars max), fixed UID so calendars that support it replace the old event. CRLF line endings, escaped text.
+- Settings stores `reminder: { enabled, daysBefore, title, exportedFor }` inside the tracker data, so it is encrypted with the PIN and included in backups. Older data without it gets the defaults.
+- Today shows "Reminder: your period is coming soon." in the window, and "Your next reminder date is now X. Update calendar" when the calendar copy is stale.
+- Limit: the phone's calendar app owns the alert. If that calendar syncs to iCloud or Google, the event title and date are stored there; the UI says so. Opening a downloaded `.ics` from an installed iPhone web app still needs a check on a real device during Operations.
+- Tests: 6 unit tests (dates, banner window, stale detection, ICS content and escaping, validation) and 1 browser test (banner, `.ics` download content, update prompt, no outside requests).

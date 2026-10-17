@@ -10,6 +10,15 @@ export function validateData(raw: unknown): TrackerData {
   if (Array.isArray(r.customSymptoms)) {
     out.customSymptoms = r.customSymptoms.filter((s): s is string => typeof s === 'string').slice(0, 100);
   }
+  if (r.reminder && typeof r.reminder === 'object') {
+    const m = r.reminder as Record<string, unknown>;
+    if (typeof m.enabled === 'boolean') out.reminder.enabled = m.enabled;
+    if (Number.isInteger(m.daysBefore) && (m.daysBefore as number) >= 1 && (m.daysBefore as number) <= 14) {
+      out.reminder.daysBefore = m.daysBefore as number;
+    }
+    if (typeof m.title === 'string' && m.title.trim()) out.reminder.title = m.title.trim().slice(0, 60);
+    if (isValidISO(m.exportedFor)) out.reminder.exportedFor = m.exportedFor;
+  }
   const days = r.days && typeof r.days === 'object' ? (r.days as Record<string, unknown>) : {};
   for (const [date, v] of Object.entries(days)) {
     if (!isValidISO(date) || !v || typeof v !== 'object') continue;

@@ -1,7 +1,11 @@
 import { useState } from 'preact/hooks';
-import type { ISODate } from '../domain/dates';
-import type { TrackerData } from '../domain/types';
+import { predict } from '../domain/cycles';
+import { diffDays, type ISODate } from '../domain/dates';
+import { reminderDate } from '../domain/reminder';
+import type { ReminderSettings, TrackerData } from '../domain/types';
 import { BackupNeedsPinError, backupFilename, makeBackup, readBackup } from '../storage/backup';
+import { saveFile } from './download';
+import { fmtShort } from './format';
 import { NewPin, PinPad } from './PinPad';
 
 interface Props {
@@ -16,6 +20,8 @@ interface Props {
   onReplaceData: (d: TrackerData) => Promise<void>;
   onRemoveSymptom: (s: string) => void;
   onWipe: () => Promise<void>;
+  onUpdateReminder: (patch: Partial<ReminderSettings>) => void;
+  onAddReminder: () => void;
   notify: (msg: string) => void;
 }
 
@@ -30,12 +36,7 @@ export function Settings(props: Props) {
 
   async function exportBackup() {
     const text = await makeBackup(data, props.sessionPin ?? undefined);
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = backupFilename(props.todayISO);
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveFile(text, backupFilename(props.todayISO), 'application/json');
     notify(props.sessionPin ? 'Backup saved, protected with your PIN.' : 'Backup saved.');
   }
 
@@ -102,6 +103,8 @@ export function Settings(props: Props) {
   return (
     <section class="screen settings">
       <h2>Settings</h2>
+
+      <ReminderCard data={data} todayISO={props.todayISO} onUpdate={props.onUpdateReminder} onAdd={props.onAddReminder} />
 
       <div class="card">
         <h3>PIN lock</h3>
@@ -202,5 +205,76 @@ export function Settings(props: Props) {
         )}
       </div>
     </section>
+  );
+}
+
+function ReminderCard({
+  data,
+  todayISO,
+  onUpdate,
+  onAdd,
+}: {
+  data: TrackerData;
+  todayISO: ISODate;
+  onUpdate: (patch: Partial<ReminderSettings>) => void;
+  onAdd: () => void;
+}) {
+  const r = data.reminder;
+  const [title, setTitle] = useState(r.title);
+  const p = predict(data, todayISO);
+  const date = p && reminderDate(p, r);
+  const passed = !!date && diffDays(todayISO, date) < 0;
+  const saveTitle = () => {
+    const t = title.trim().slice(0, 60) || 'Reminder';
+    setTitle(t);
+    if (t !== r.title) onUpdate({ title: t });
+  };
+  return (
+    <div class="card">
+      <h3>Period reminder</h3>
+      <label class="toggle">
+        <input type="checkbox" checked={r.enabled} onChange={(e) => onUpdate({ enabled: e.currentTarget.checked })} />
+        Remind me before my period
+      </label>
+      {r.enabled && (
+        <>
+          <div class="field-row">
+            <label for="reminder-days">Days before</label>
+            <select
+              id="reminder-days"
+              value={r.daysBefore}
+              onChange={(e) => onUpdate({ daysBefore: Number(e.currentTarget.value) })}
+            >
+              {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => (
+                <option value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+          <div class="field-row">
+            <label for="reminder-title">Calendar title</label>
+            <input
+              id="reminder-title"
+              type="text"
+              maxLength={60}
+              value={title}
+              onInput={(e) => setTitle(e.currentTarget.value)}
+              onBlur={saveTitle}
+            />
+          </div>
+          <p class="muted small">
+            {!date
+              ? 'Log a period first so the app can work out the date.'
+              : passed
+                ? `This cycle's reminder date (${fmtShort(date)}) has passed. Add the next one after your period starts.`
+                : `Next reminder: ${fmtShort(date)} at 9:00.`}{' '}
+            The alert comes from your phone's calendar, so it works even when this app is closed. If your calendar
+            syncs to iCloud or Google, that service stores the event's title and date, so keep the title neutral.
+          </p>
+          <button type="button" class="secondary" disabled={!date || passed} onClick={onAdd}>
+            {r.exportedFor ? 'Update calendar reminder' : 'Add reminder to calendar'}
+          </button>
+        </>
+      )}
+    </div>
   );
 }

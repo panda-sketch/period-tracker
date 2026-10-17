@@ -1,6 +1,7 @@
 import { cycleDay, predict, upcomingFertileWindow } from '../domain/cycles';
 import { diffDays, type ISODate } from '../domain/dates';
 import type { TrackerData } from '../domain/types';
+import { bannerDaysLeft, calendarOutOfDate, reminderDate } from '../domain/reminder';
 import { fmtShort, plural } from './format';
 
 interface Props {
@@ -8,14 +9,17 @@ interface Props {
   todayISO: ISODate;
   onStartPeriod: () => void;
   onOpenDay: (d: ISODate) => void;
+  onAddReminder: () => void;
 }
 
-export function Today({ data, todayISO, onStartPeriod, onOpenDay }: Props) {
+export function Today({ data, todayISO, onStartPeriod, onOpenDay, onAddReminder }: Props) {
   const p = predict(data, todayISO);
   const day = cycleDay(data, todayISO);
   const fertile = p && upcomingFertileWindow(p, todayISO);
   const todayLog = data.days[todayISO];
   const onPeriodToday = !!todayLog?.flow && todayLog.flow !== 'spotting';
+  const daysLeft = p && !onPeriodToday ? bannerDaysLeft(p, data.reminder, todayISO) : null;
+  const staleCalendar = !!p && calendarOutOfDate(p, data.reminder, todayISO);
 
   let headline: string;
   let sub = '';
@@ -33,6 +37,19 @@ export function Today({ data, todayISO, onStartPeriod, onOpenDay }: Props) {
 
   return (
     <section class="screen today">
+      {daysLeft !== null && (
+        <div class="banner" role="status">
+          {daysLeft === 0 ? 'Reminder: your period is expected today.' : 'Reminder: your period is coming soon.'}
+        </div>
+      )}
+      {staleCalendar && (
+        <div class="banner notice">
+          <span>Your next reminder date is now {fmtShort(reminderDate(p!, data.reminder))}.</span>
+          <button type="button" class="secondary" onClick={onAddReminder}>
+            Update calendar
+          </button>
+        </div>
+      )}
       <div class="ring" aria-live="polite">
         {day !== null && <div class="ring-day">Cycle day {day}</div>}
         <div class="ring-headline">{headline}</div>
